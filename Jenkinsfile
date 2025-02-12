@@ -24,7 +24,9 @@ pipeline {
             steps {
                 // Logs into Harbor using the credentials you've set up
                 withCredentials([usernamePassword(credentialsId: 'harbor-credentials', usernameVariable: 'HARBOR_USER', passwordVariable: 'HARBOR_PASS')]) {
-                   sh '''docker login -u $HARBOR_USER --password-stdin http://$HARBOR_URL <<<$HARBOR_PASS'''
+                    sh """
+                    echo '$HARBOR_PASS' | docker login -u $HARBOR_USER --password-stdin $HARBOR_URL
+                    """
                 }
             }
         }
@@ -34,7 +36,6 @@ pipeline {
                 sh "docker push $HARBOR_URL/$HARBOR_PROJECT/$IMAGE_NAME:$IMAGE_TAG"
             }
         }
-        // Add the Ansible deployment stage here
         stage('Trigger Ansible Deployment') {
             steps {
                 // Run Ansible playbook locally since they are on the same server
