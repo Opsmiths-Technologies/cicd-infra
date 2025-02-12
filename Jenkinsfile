@@ -24,7 +24,7 @@ pipeline {
             steps {
                 // Logs into Harbor using the credentials you've set up
                 withCredentials([usernamePassword(credentialsId: 'harbor-credentials', usernameVariable: 'HARBOR_USER', passwordVariable: 'HARBOR_PASS')]) {
-                    sh "docker login -u $HARBOR_USER -p $HARBOR_PASS $HARBOR_URL"
+                   sh '''docker login -u $HARBOR_USER --password-stdin http://$HARBOR_URL <<<$HARBOR_PASS'''
                 }
             }
         }
