@@ -11,7 +11,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 // This step checks out your code from GitHub
-                git credentialsId: 'github-credentials', url: 'git@github.com:Opsmiths-Technologies/cicd-infra.git', branch: 'main'
+                git credentialsId: 'github-org-credentials-pat', url: 'git@github.com:Opsmiths-Technologies/cicd-infra.git', branch: 'main'
             }
         }
         stage('Build Docker Image') {
