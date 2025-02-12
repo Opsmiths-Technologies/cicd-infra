@@ -39,10 +39,12 @@ pipeline {
         stage('Trigger Ansible Deployment') {
             steps {
                 // Run Ansible playbook locally since they are on the same server
-                sh """
-                ansible-playbook -i /etc/ansible/inventory.ini /etc/ansible/deploy.yml \
-                --extra-vars "image=$HARBOR_URL/$HARBOR_PROJECT/$IMAGE_NAME:$IMAGE_TAG app_name=$APP_NAME"
-                """
+                withCredentials([usernamePassword(credentialsId: 'harbor-credentials', usernameVariable: 'HARBOR_USER', passwordVariable: 'HARBOR_PASS')]) {
+                    sh """
+                    ansible-playbook -i /etc/ansible/inventory.ini /etc/ansible/deploy.yml \
+                    --extra-vars "image=$HARBOR_URL/$HARBOR_PROJECT/$IMAGE_NAME:$IMAGE_TAG app_name=$APP_NAME"
+                    """
+                }
             }
         }
     }
