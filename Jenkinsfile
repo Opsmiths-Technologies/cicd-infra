@@ -1,7 +1,7 @@
 pipeline {
     agent any
     environment {
-        HARBOR_URL = "192.168.1.27:8080" // This is your local Harbor IP
+        HARBOR_URL = "192.168.1.27" // This is your local Harbor IP
         HARBOR_PROJECT = "cicd-infra" // Replace with your project name in Harbor
         IMAGE_NAME = "cicd-test-app" // Replace with your desired image name
         APP_NAME = "cicd-test-app" // Replace with your app name
