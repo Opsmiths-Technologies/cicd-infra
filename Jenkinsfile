@@ -1,48 +1,48 @@
 pipeline {
     agent any
     environment {
-        HARBOR_URL = "192.168.1.27" // This is your local Harbor IP
-        HARBOR_PROJECT = "cicd-infra" // Replace with your project name in Harbor
-        IMAGE_NAME = "cicd-test-app" // Replace with your desired image name
-        APP_NAME = "cicd-test-app" // Replace with your app name
-        IMAGE_TAG = "${env.BUILD_NUMBER}" // Uses Jenkins build number for versioning
+        AWS_REGION      = "eu-central-1"
+        ECR_REPOSITORY  = "cicd-infra"
+        IMAGE_NAME      = "cicd-test-app"
+        IMAGE_TAG       = "${env.BUILD_NUMBER}"
+        AWS_ACCOUNT_ID  = "225320283044"
+        ECR_URL         = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
     }
     stages {
         stage('Checkout') {
             steps {
-                // This step checks out your code from GitHub
                 git credentialsId: 'github-org-credentials', url: 'https://github.com/Opsmiths-Technologies/cicd-infra.git', branch: 'main'
             }
         }
         stage('Build Docker Image') {
             steps {
-                // Builds the Docker image with the specified tag
-                sh "docker build -t $HARBOR_URL/$HARBOR_PROJECT/$IMAGE_NAME:$IMAGE_TAG ."
+                sh "docker build -t $ECR_URL/$ECR_REPOSITORY:$IMAGE_TAG ."
             }
         }
-        stage('Login to Harbor') {
+        stage('Login to ECR') {
             steps {
-                // Logs into Harbor using the credentials you've set up
-                withCredentials([usernamePassword(credentialsId: 'harbor-credentials', usernameVariable: 'HARBOR_USER', passwordVariable: 'HARBOR_PASS')]) {
+                withCredentials([aws(credentialsId: 'aws-credentials', accessKeyVariable: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
                     sh """
-                    echo '$HARBOR_PASS' | docker login -u $HARBOR_USER --password-stdin $HARBOR_URL
+                    aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+                    aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+                    aws configure set region $AWS_REGION
+                    aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_URL
                     """
                 }
             }
         }
-        stage('Push to Harbor') {
+        stage('Push to ECR') {
             steps {
-                // Pushes the Docker image to Harbor
-                sh "docker push $HARBOR_URL/$HARBOR_PROJECT/$IMAGE_NAME:$IMAGE_TAG"
+                sh "docker push $ECR_URL/$ECR_REPOSITORY:$IMAGE_TAG"
             }
         }
         stage('Trigger Ansible Deployment') {
             steps {
-                // Run Ansible playbook locally since they are on the same server
-                withCredentials([usernamePassword(credentialsId: 'harbor-credentials', usernameVariable: 'HARBOR_USER', passwordVariable: 'HARBOR_PASS')]) {
+                withCredentials([aws(credentialsId: 'aws-credentials', accessKeyVariable: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+                    // Passing the dynamic image name as an extra variable to the playbook.
                     sh """
                     ansible-playbook -i /etc/ansible/inventory.ini /etc/ansible/deploy.yml \
-                    --extra-vars "image=$HARBOR_URL/$HARBOR_PROJECT/$IMAGE_NAME:$IMAGE_TAG app_name=$APP_NAME harbor_username=$HARBOR_USER harbor_password=$HARBOR_PASS"
+                    --extra-vars "image=$ECR_URL/$ECR_REPOSITORY:$IMAGE_TAG app_name=$IMAGE_NAME aws_access_key=$AWS_ACCESS_KEY_ID aws_secret_key=$AWS_SECRET_ACCESS_KEY aws_region=$AWS_REGION"
                     """
                 }
             }
